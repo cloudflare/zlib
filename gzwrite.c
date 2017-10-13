@@ -372,8 +372,8 @@ int ZEXPORTVA gzvprintf(gzFile file, const char *format, va_list va)
         left = strm->avail_in - state->size;
         strm->avail_in = state->size;
         if (gz_comp(state, Z_NO_FLUSH) == -1)
-            return 0;
-        memcpy(state->in, state->in + state->size, left);
+            return state->err;
+        memmove(state->in, state->in + state->size, left);
         strm->next_in = state->in;
         strm->avail_in = left;
     }
@@ -470,8 +470,8 @@ int ZEXPORTVA gzprintf (file, format, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10,
         left = strm->avail_in - state->size;
         strm->avail_in = state->size;
         if (gz_comp(state, Z_NO_FLUSH) == -1)
-            return 0;
-        memcpy(state->in, state->in + state->size, left);
+            return state->err;
+        memmove(state->in, state->in + state->size, left);
         strm->next_in = state->in;
         strm->avail_in = left;
     }
