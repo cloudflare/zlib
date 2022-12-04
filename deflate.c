@@ -1266,12 +1266,20 @@ static uint32_t longest_match(s, cur_match)
             if (xor) {
                 int match_byte = __builtin_ctzl(xor) / 8;
                 scan += match_byte;
-                match += match_byte;
                 break;
-            } else {
-                scan += 8;
-                match += 8;
             }
+            scan += 8;
+            match += 8;
+            sv = *(uint64_t*)(void*)scan;
+            mv = *(uint64_t*)(void*)match;
+            xor = sv ^ mv;
+            if (xor) {
+                int match_byte = __builtin_ctzl(xor) / 8;
+                scan += match_byte;
+                break;
+            }
+            scan += 8;
+            match += 8;
         } while (scan < strend);
 
         if (scan > strend)
