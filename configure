@@ -815,8 +815,8 @@ EOF
     echo "Checking for PCLMUL support ... No" | tee -a configure.log
   fi
 
-elif [ x$TGT_ARCH = "xaarch64" ] ; then
-
+# on macOS `uname -m` returns `arm64`
+elif [ x$TGT_ARCH = "xaarch64" -o x$TGT_ARCH = "xarm64" ] ; then
   # Check for NEON and CRC support
 cat > $test.c << EOF
 #include <arm_neon.h>
