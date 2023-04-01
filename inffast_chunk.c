@@ -35,10 +35,6 @@
 #  pragma message("Assembler code may have bugs -- use at your own risk")
 #else
 
-#ifndef INFLATE_CHUNK_READ_64LE
-#  error INFLATE_CHUNK_SIMD_* requires INFLATE_CHUNK_READ_64LE
-#endif
-
 /*
    Decode literal, length, and distance codes and write out the resulting
    literal and match bytes until either not enough input or output is
@@ -125,8 +121,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     unsigned len;               /* match length, unused bytes */
     unsigned dist;              /* match distance */
     unsigned char FAR *from;    /* where to copy match from */
-    unsigned here32;            /* table entry as integer */
-    inflate_holder_t old;       /* look-behind buffer for extra bits */
 
     /* copy state to local variables */
     state = (struct inflate_state FAR *)strm->state;
@@ -150,106 +144,97 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
     lmask = (1U << state->lenbits) - 1;
     dmask = (1U << state->distbits) - 1;
 
-    /* This is extremely latency sensitive, so empty inline assembly blocks are
-       used to prevent the compiler from reassociating. */
-#define REFILL() do { \
-        hold |= read64le(in) << bits; \
-        in += 7; \
-        asm volatile ("" : "+r"(in)); \
-        uint64_t tmp = ((bits >> 3) & 7); \
-        asm volatile ("" : "+r"(tmp)); \
-        in -= tmp; \
-        bits |= 56; \
-    } while (0)
-
-#define TABLE_LOAD(table, index) do { \
-        memcpy(&here32, &(table)[(index)], sizeof(code)); \
-        memcpy(&here, &here32, sizeof(code)); \
-    } while (0)
-
-    if (bits < 10) {
-        REFILL();
-    }
-
     /* decode literals and length/distances until end-of-block or not enough
        input data or output space */
     do {
-        uint64_t next_hold = hold | (read64le(in) << bits);
-        in += 7;
-        uint64_t tmp = ((bits >> 3) & 7);
-        in -= tmp;
-        bits |= 56;
-        TABLE_LOAD(lcode, hold & lmask);
-        hold = next_hold;
-        old = hold;
-        hold >>= here.bits;
-        bits -= here32;
-      preloaded:
-        if (likely(here.op == 0)) {
-            *out++ = (unsigned char)(here.val);
-            TABLE_LOAD(lcode, hold & lmask);
-            old = hold;
-            hold >>= here.bits;
-            bits -= here32;
-            if (likely(here.op == 0)) {
-                *out++ = (unsigned char)(here.val);
-                TABLE_LOAD(lcode, hold & lmask);
-                old = hold;
-                hold >>= here.bits;
-                bits -= here32;
-            }
+        if (bits < 15) {
+#ifdef INFLATE_CHUNK_READ_64LE
+            hold |= read64le(in) << bits;
+            in += 6;
+            bits += 48;
+#else
+            hold += (unsigned long)(*in++) << bits;
+            bits += 8;
+            hold += (unsigned long)(*in++) << bits;
+            bits += 8;
+#endif
         }
+        here = lcode[hold & lmask];
       dolen:
+        op = (unsigned)(here.bits);
+        hold >>= op;
+        bits -= op;
         op = (unsigned)(here.op);
-        if (likely(op == 0)) {                  /* literal */
+        if (op == 0) {                          /* literal */
             Tracevv((stderr, here.val >= 0x20 && here.val < 0x7f ?
                     "inflate:         literal '%c'\n" :
                     "inflate:         literal 0x%02x\n", here.val));
             *out++ = (unsigned char)(here.val);
         }
-        else if (likely(op & 16)) {             /* length base */
+        else if (op & 16) {                     /* length base */
             len = (unsigned)(here.val);
-            len += ((old & ~((uint64_t)-1 << here.bits)) >> (op & 15));
-            Tracevv((stderr, "inflate:         length %u\n", len));
-            TABLE_LOAD(dcode, hold & dmask);
-            /* we have two fast-path loads: 10+10 + 15+5 = 40,
-               but we may need to refill here in the worst case */
-            if (unlikely((bits & 63) < 15 + 13)) {
-                REFILL();
+            op &= 15;                           /* number of extra bits */
+            if (op) {
+                if (bits < op) {
+#ifdef INFLATE_CHUNK_READ_64LE
+                    hold |= read64le(in) << bits;
+                    in += 6;
+                    bits += 48;
+#else
+                    hold += (unsigned long)(*in++) << bits;
+                    bits += 8;
+#endif
+                }
+                len += (unsigned)hold & ((1U << op) - 1);
+                hold >>= op;
+                bits -= op;
             }
+            Tracevv((stderr, "inflate:         length %u\n", len));
+            if (bits < 15) {
+#ifdef INFLATE_CHUNK_READ_64LE
+                hold |= read64le(in) << bits;
+                in += 6;
+                bits += 48;
+#else
+                hold += (unsigned long)(*in++) << bits;
+                bits += 8;
+                hold += (unsigned long)(*in++) << bits;
+                bits += 8;
+#endif
+            }
+            here = dcode[hold & dmask];
           dodist:
-            old = hold;
-            hold >>= here.bits;
-            bits -= here32;
+            op = (unsigned)(here.bits);
+            hold >>= op;
+            bits -= op;
             op = (unsigned)(here.op);
-            if (likely(op & 16)) {              /* distance base */
+            if (op & 16) {                      /* distance base */
                 dist = (unsigned)(here.val);
-                dist += ((old & ~((uint64_t)-1 << here.bits)) >> (op & 15));
+                op &= 15;                       /* number of extra bits */
+                if (bits < op) {
+#ifdef INFLATE_CHUNK_READ_64LE
+                    hold |= read64le(in) << bits;
+                    in += 6;
+                    bits += 48;
+#else
+                    hold += (unsigned long)(*in++) << bits;
+                    bits += 8;
+                    if (bits < op) {
+                        hold += (unsigned long)(*in++) << bits;
+                        bits += 8;
+                    }
+#endif
+                }
+                dist += (unsigned)hold & ((1U << op) - 1);
 #ifdef INFLATE_STRICT
-                if (unlikely(dist > dmax)) {
+                if (dist > dmax) {
                     strm->msg = (char *)"invalid distance too far back";
                     state->mode = BAD;
                     break;
                 }
 #endif
-                if (unlikely((bits & 63) < 10)) {
-                    REFILL();
-                }
-
-                /* preload and shift for next iteration */
-                uint64_t next_hold = hold | (read64le(in) << bits);
-                in += 7;
-                asm volatile ("" : "+r"(in));
-                uint64_t tmp = ((bits >> 3) & 7);
-                asm volatile ("" : "+r"(tmp));
-                in -= tmp;
-                bits |= 56;
-                TABLE_LOAD(lcode, hold & lmask);
-                hold = next_hold;
-                old = hold;
-                hold >>= here.bits;
-                bits -= here32;
-
+                hold >>= op;
+                bits -= op;
                 Tracevv((stderr, "inflate:         distance %u\n", dist));
                 op = (unsigned)(out - beg);     /* max distance in output */
                 if (dist > op) {                /* see if copy from window */
@@ -259,14 +244,14 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             strm->msg =
                                 (char *)"invalid distance too far back";
                             state->mode = BAD;
-                            goto chunk_break;
+                            break;
                         }
 #ifdef INFLATE_ALLOW_INVALID_DISTANCE_TOOFAR_ARRR
                         if (len <= op - whave) {
                             do {
                                 *out++ = 0;
                             } while (--len);
-                            goto chunk_continue;
+                            continue;
                         }
                         len -= op - whave;
                         do {
@@ -277,7 +262,7 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                             do {
                                 *out++ = *from++;
                             } while (--len);
-                            goto chunk_continue;
+                            continue;
                         }
 #endif
                     }
@@ -327,21 +312,10 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                        stay within 258 bytes of `out`.
                      */
                     out = chunkcopy_lapped_relaxed(out, dist, len);
-
                 }
-
-              chunk_continue:
-                if (likely(in < last && out < end))
-                   goto preloaded;
-
-              chunk_break:
-                /* undo pre-shift */
-                hold = old;
-                bits += here32;
-                break;
             }
-            else if (likely((op & 64) == 0)) {  /* 2nd level distance code */
-                TABLE_LOAD(dcode, here.val + (hold & ((1U << op) - 1)));
+            else if ((op & 64) == 0) {          /* 2nd level distance code */
+                here = dcode[here.val + (hold & ((1U << op) - 1))];
                 goto dodist;
             }
             else {
@@ -350,14 +324,11 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
                 break;
             }
         }
-        else if (likely((op & 64) == 0)) {      /* 2nd level length code */
-            TABLE_LOAD(lcode, here.val + (hold & ((1U << op) - 1)));
-            old = hold;
-            hold >>= here.bits;
-            bits -= here32;
+        else if ((op & 64) == 0) {              /* 2nd level length code */
+            here = lcode[here.val + (hold & ((1U << op) - 1))];
             goto dolen;
         }
-        else if (likely(op & 32)) {             /* end-of-block */
+        else if (op & 32) {                     /* end-of-block */
             Tracevv((stderr, "inflate:         end of block\n"));
             state->mode = TYPE;
             break;
@@ -368,8 +339,6 @@ unsigned start;         /* inflate()'s starting value for strm->avail_out */
             break;
         }
     } while (in < last && out < end);
-
-    bits &= 63;
 
     /* return unused bytes (on entry, bits < 8, so in won't go too far back) */
     len = bits >> 3;
