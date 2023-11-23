@@ -862,8 +862,8 @@ void foo(void) {
 }
 EOF
   if try $CC -msse2 $CFLAGS $test.c -c $test; then
-    CFLAGS="-DINFLATE_CHUNK_SIMD_SSE2 -msse2 -DINFLATE_CHUNK_READ_64LE $CFLAGS"
-    SFLAGS="-DINFLATE_CHUNK_SIMD_SSE2 -msse2 -DINFLATE_CHUNK_READ_64LE $SFLAGS"
+    CFLAGS="-DINFLATE_CHUNK_SIMD_SSE2 -DHAS_SSE2 -msse2 -DINFLATE_CHUNK_READ_64LE $CFLAGS"
+    SFLAGS="-DINFLATE_CHUNK_SIMD_SSE2 -DHAS_SSE2 -msse2 -DINFLATE_CHUNK_READ_64LE $SFLAGS"
     echo "Checking for SSE2 support ... Yes" | tee -a configure.log
   else
     echo "Checking for SSE2 support ... No" | tee -a configure.log
