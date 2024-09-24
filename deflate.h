@@ -334,11 +334,11 @@ extern const uint8_t ZLIB_INTERNAL _dist_code[];
 #define likely(x)       (x)
 #define unlikely(x)     (x)
 
-int __inline __builtin_ctzl(unsigned long mask)
+uint64_t __inline __builtin_ctzll(uint64_t mask)
 {
     unsigned long index ;
 
-    return _BitScanForward(&index, mask) == 0 ? 32 : ((int)index) ;
+    return _BitScanForward64(&index, mask) == 0 ? 64 : ((int)index) ;
 }
 #else
 #define likely(x)       __builtin_expect((x),1)

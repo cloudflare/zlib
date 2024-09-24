@@ -1209,7 +1209,7 @@ static uint32_t longest_match(deflate_state *s, IPos cur_match /* current match 
             uint64_t mv = *(uint64_t*)(void*)match;
             uint64_t xor = sv ^ mv;
             if (xor) {
-                int match_byte = __builtin_ctzl(xor) / 8;
+                int match_byte = __builtin_ctzll(xor) / 8;
                 scan += match_byte;
                 match += match_byte;
                 break;
