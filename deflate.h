@@ -334,7 +334,7 @@ extern const uint8_t ZLIB_INTERNAL _dist_code[];
 #define likely(x)       (x)
 #define unlikely(x)     (x)
 
-uint64_t __inline __builtin_ctzll(uint64_t mask)
+int __inline __builtin_ctzll(uint64_t mask)
 {
     unsigned long index ;
 
