@@ -1,6 +1,6 @@
 [package]
 name = "cloudflare-zlib-sys"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 authors = ["Vlad Krasnov <vlad@cloudflare.com>", "Kornel Lesiński <kornel@geekhood.net>", "Mark Adler <madler@alumni.caltech.edu>"]
 categories = ["external-ffi-bindings", "compression"]
@@ -20,7 +20,7 @@ crate-type = ["lib", "staticlib"]
 path = "rust/lib.rs"
 
 [build-dependencies]
-cc = "1.0.67"
+cc = "1.1"
 
 [features]
 # Obsolete
