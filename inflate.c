@@ -219,6 +219,7 @@ int ZEXPORT inflateInit2_(z_streamp strm, int windowBits,
     state = (struct inflate_state FAR *)
             ZALLOC(strm, 1, sizeof(struct inflate_state));
     if (state == Z_NULL) return Z_MEM_ERROR;
+    zmemzero(state, sizeof(struct inflate_state));
     Tracev((stderr, "inflate: allocated\n"));
     strm->state = (struct internal_state FAR *)state;
     state->strm = strm;
@@ -1526,6 +1527,7 @@ int ZEXPORT inflateCopy(z_streamp dest, z_streamp source) {
     copy = (struct inflate_state FAR *)
            ZALLOC(source, 1, sizeof(struct inflate_state));
     if (copy == Z_NULL) return Z_MEM_ERROR;
+    zmemzero(copy, sizeof(struct inflate_state));
     window = Z_NULL;
     if (state->window != Z_NULL) {
         unsigned wsize_padded = 1U << state->wbits;
