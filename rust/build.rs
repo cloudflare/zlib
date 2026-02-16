@@ -105,7 +105,6 @@ fn main() {
     cc.file(vendor.join("adler32_simd.c"));
     cc.file(vendor.join("crc32.c"));
     cc.file(vendor.join("deflate.c"));
-    cc.file(vendor.join("infback.c"));
     cc.file(vendor.join("inffast.c"));
     cc.file(vendor.join("inflate.c"));
     cc.file(vendor.join("inftrees.c"));

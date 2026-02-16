@@ -16,23 +16,8 @@
 #   make install -fwin32/Makefile.gcc
 #
 # BINARY_PATH, INCLUDE_PATH and LIBRARY_PATH must be set.
-#
-# To install the shared lib, append SHARED_MODE=1 to the make command :
-#
-#   make install -fwin32/Makefile.gcc SHARED_MODE=1
-
-# Note:
-# If the platform is *not* MinGW (e.g. it is Cygwin or UWIN),
-# the DLL name should be changed from "zlib1.dll".
 
 STATICLIB = libz.a
-SHAREDLIB = zlib1.dll
-IMPLIB    = libz.dll.a
-
-#
-# Set to 1 if shared object needs to be installed
-#
-SHARED_MODE=0
 
 #LOC = -DZLIB_DEBUG -g
 
@@ -63,10 +48,10 @@ prefix ?= /usr/local
 exec_prefix = $(prefix)
 
 OBJS = adler32.o compress.o crc32.o deflate.o gzclose.o gzlib.o gzread.o \
-       gzwrite.o infback.o inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
+       gzwrite.o inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
 OBJA =
 
-all: $(STATICLIB) $(SHAREDLIB) $(IMPLIB) example.exe minigzip.exe example_d.exe minigzip_d.exe
+all: $(STATICLIB) example.exe minigzip.exe example_d.exe minigzip_d.exe
 
 test: example.exe minigzip.exe
 	./example
@@ -85,13 +70,6 @@ testdll: example_d.exe minigzip_d.exe
 $(STATICLIB): $(OBJS) $(OBJA)
 	$(AR) $(ARFLAGS) $@ $(OBJS) $(OBJA)
 
-$(IMPLIB): $(SHAREDLIB)
-
-$(SHAREDLIB): win32/zlib.def $(OBJS) $(OBJA) zlibrc.o
-	$(CC) -shared -Wl,--out-implib,$(IMPLIB) $(LDFLAGS) \
-	-o $@ win32/zlib.def $(OBJS) $(OBJA) zlibrc.o
-	$(STRIP) $@
-
 example.exe: example.o $(STATICLIB)
 	$(LD) $(LDFLAGS) -o $@ example.o $(STATICLIB)
 	$(STRIP) $@
@@ -100,12 +78,12 @@ minigzip.exe: minigzip.o $(STATICLIB)
 	$(LD) $(LDFLAGS) -o $@ minigzip.o $(STATICLIB)
 	$(STRIP) $@
 
-example_d.exe: example.o $(IMPLIB)
-	$(LD) $(LDFLAGS) -o $@ example.o $(IMPLIB)
+example_d.exe: example.o $(STATICLIB)
+	$(LD) $(LDFLAGS) -o $@ example.o $(STATICLIB)
 	$(STRIP) $@
 
-minigzip_d.exe: minigzip.o $(IMPLIB)
-	$(LD) $(LDFLAGS) -o $@ minigzip.o $(IMPLIB)
+minigzip_d.exe: minigzip.o $(STATICLIB)
+	$(LD) $(LDFLAGS) -o $@ minigzip.o $(STATICLIB)
 	$(STRIP) $@
 
 example.o: test/example.c zlib.h zconf.h
@@ -119,43 +97,8 @@ zlibrc.o: win32/zlib1.rc
 
 .PHONY: install uninstall clean
 
-install: zlib.h zconf.h $(STATICLIB) $(IMPLIB)
-	@if test -z "$(DESTDIR)$(INCLUDE_PATH)" -o -z "$(DESTDIR)$(LIBRARY_PATH)" -o -z "$(DESTDIR)$(BINARY_PATH)"; then \
-		echo INCLUDE_PATH, LIBRARY_PATH, and BINARY_PATH must be specified; \
-		exit 1; \
-	fi
-	-@mkdir -p '$(DESTDIR)$(INCLUDE_PATH)'
-	-@mkdir -p '$(DESTDIR)$(LIBRARY_PATH)' '$(DESTDIR)$(LIBRARY_PATH)'/pkgconfig
-	-if [ "$(SHARED_MODE)" = "1" ]; then \
-		mkdir -p '$(DESTDIR)$(BINARY_PATH)'; \
-		$(INSTALL) $(SHAREDLIB) '$(DESTDIR)$(BINARY_PATH)'; \
-		$(INSTALL) $(IMPLIB) '$(DESTDIR)$(LIBRARY_PATH)'; \
-	fi
-	-$(INSTALL) zlib.h '$(DESTDIR)$(INCLUDE_PATH)'
-	-$(INSTALL) zconf.h '$(DESTDIR)$(INCLUDE_PATH)'
-	-$(INSTALL) $(STATICLIB) '$(DESTDIR)$(LIBRARY_PATH)'
-	sed \
-		-e 's|@prefix@|${prefix}|g' \
-		-e 's|@exec_prefix@|${exec_prefix}|g' \
-		-e 's|@libdir@|$(LIBRARY_PATH)|g' \
-		-e 's|@sharedlibdir@|$(LIBRARY_PATH)|g' \
-		-e 's|@includedir@|$(INCLUDE_PATH)|g' \
-		-e 's|@VERSION@|'`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' zlib.h`'|g' \
-		zlib.pc.in > '$(DESTDIR)$(LIBRARY_PATH)'/pkgconfig/zlib.pc
-
-uninstall:
-	-if [ "$(SHARED_MODE)" = "1" ]; then \
-		$(RM) '$(DESTDIR)$(BINARY_PATH)'/$(SHAREDLIB); \
-		$(RM) '$(DESTDIR)$(LIBRARY_PATH)'/$(IMPLIB); \
-	fi
-	-$(RM) '$(DESTDIR)$(INCLUDE_PATH)'/zlib.h
-	-$(RM) '$(DESTDIR)$(INCLUDE_PATH)'/zconf.h
-	-$(RM) '$(DESTDIR)$(LIBRARY_PATH)'/$(STATICLIB)
-
 clean:
 	-$(RM) $(STATICLIB)
-	-$(RM) $(SHAREDLIB)
-	-$(RM) $(IMPLIB)
 	-$(RM) *.o
 	-$(RM) *.exe
 	-$(RM) foo.gz
@@ -170,7 +113,6 @@ gzread.o: zlib.h zconf.h gzguts.h
 gzwrite.o: zlib.h zconf.h gzguts.h
 inffast.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h
 inflate.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h
-infback.o: zutil.h zlib.h zconf.h inftrees.h inflate.h inffast.h
 inftrees.o: zutil.h zlib.h zconf.h inftrees.h
 trees.o: deflate.h zutil.h zlib.h zconf.h trees.h
 uncompr.o: zlib.h zconf.h

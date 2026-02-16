@@ -18,8 +18,6 @@ LOC =
 
 # variables
 STATICLIB = zlib.lib
-SHAREDLIB = zlib1.dll
-IMPLIB    = zdll.lib
 
 CC = cl
 AS = ml
@@ -34,24 +32,16 @@ ARFLAGS = -nologo
 RCFLAGS = /dWIN32 /r
 
 OBJS = adler32.obj compress.obj crc32_simd.obj crc32.obj deflate.obj gzclose.obj gzlib.obj gzread.obj \
-       gzwrite.obj infback.obj inflate.obj inftrees.obj inffast.obj trees.obj uncompr.obj zutil.obj
+       gzwrite.obj inflate.obj inftrees.obj inffast.obj trees.obj uncompr.obj zutil.obj
 OBJA =
 
 
 # targets
-all: $(STATICLIB) $(SHAREDLIB) $(IMPLIB) \
+all: $(STATICLIB) \
      example.exe minigzip.exe example_d.exe minigzip_d.exe
 
 $(STATICLIB): $(OBJS) $(OBJA)
 	$(AR) $(ARFLAGS) -out:$@ $(OBJS) $(OBJA)
-
-$(IMPLIB): $(SHAREDLIB)
-
-$(SHAREDLIB): $(TOP)/win32/zlib.def $(OBJS) $(OBJA) zlib1.res
-	$(LD) $(LDFLAGS) -def:$(TOP)/win32/zlib.def -dll -implib:$(IMPLIB) \
-	  -out:$@ -base:0x5A4C0000 $(OBJS) $(OBJA) zlib1.res
-	if exist $@.manifest \
-	  mt -nologo -manifest $@.manifest -outputresource:$@;2
 
 example.exe: example.obj $(STATICLIB)
 	$(LD) $(LDFLAGS) example.obj $(STATICLIB)
@@ -63,13 +53,13 @@ minigzip.exe: minigzip.obj $(STATICLIB)
 	if exist $@.manifest \
 	  mt -nologo -manifest $@.manifest -outputresource:$@;1
 
-example_d.exe: example.obj $(IMPLIB)
-	$(LD) $(LDFLAGS) -out:$@ example.obj $(IMPLIB)
+example_d.exe: example.obj $(STATICLIB)
+	$(LD) $(LDFLAGS) -out:$@ example.obj $(STATICLIB)
 	if exist $@.manifest \
 	  mt -nologo -manifest $@.manifest -outputresource:$@;1
 
-minigzip_d.exe: minigzip.obj $(IMPLIB)
-	$(LD) $(LDFLAGS) -out:$@ minigzip.obj $(IMPLIB)
+minigzip_d.exe: minigzip.obj $(STATICLIB)
+	$(LD) $(LDFLAGS) -out:$@ minigzip.obj $(STATICLIB)
 	if exist $@.manifest \
 	  mt -nologo -manifest $@.manifest -outputresource:$@;1
 
@@ -103,9 +93,6 @@ gzlib.obj: $(TOP)/gzlib.c $(TOP)/zlib.h $(TOP)/zconf.h $(TOP)/gzguts.h
 gzread.obj: $(TOP)/gzread.c $(TOP)/zlib.h $(TOP)/zconf.h $(TOP)/gzguts.h
 
 gzwrite.obj: $(TOP)/gzwrite.c $(TOP)/zlib.h $(TOP)/zconf.h $(TOP)/gzguts.h
-
-infback.obj: $(TOP)/infback.c $(TOP)/zutil.h $(TOP)/zlib.h $(TOP)/zconf.h $(TOP)/inftrees.h $(TOP)/inflate.h \
-             $(TOP)/inffast.h $(TOP)/inffixed.h
 
 inffast.obj: $(TOP)/inffast.c $(TOP)/zutil.h $(TOP)/zlib.h $(TOP)/zconf.h $(TOP)/inftrees.h $(TOP)/inflate.h \
              $(TOP)/inffast.h
@@ -144,16 +131,9 @@ test: example.exe minigzip.exe
 	example
 	echo hello world | minigzip | minigzip -d
 
-testdll: example_d.exe minigzip_d.exe
-	example_d
-	echo hello world | minigzip_d | minigzip_d -d
-
-
 # cleanup
 clean:
 	-del $(STATICLIB)
-	-del $(SHAREDLIB)
-	-del $(IMPLIB)
 	-del *.obj
 	-del *.res
 	-del *.exp
