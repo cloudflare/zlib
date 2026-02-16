@@ -40,10 +40,6 @@ pub unsafe fn inflateInit2(strm: z_streamp, window_bits: c_int) -> c_int {
     inflateInit2_(strm, window_bits, ZLIB_VERSION.as_ptr() as *const _, ::std::mem::size_of::<z_stream>() as c_int)
 }
 
-pub unsafe fn inflateBackInit(strm: z_streamp, window_bits: c_int, window: *mut c_uchar) -> c_int {
-    inflateBackInit_(strm, window_bits, window, ZLIB_VERSION.as_ptr() as *const _, ::std::mem::size_of::<z_stream>() as c_int)
-}
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct gz_header {
@@ -126,9 +122,6 @@ extern "C" {
     pub fn gzungetc(c: c_int, file: gzFile) -> c_int;
     pub fn gzwrite(file: gzFile, buf: voidpc, len: c_uint) -> c_int;
     pub fn inflate(strm: z_streamp, flush: c_int) -> c_int;
-    pub fn inflateBack(strm: z_streamp, _in: in_func, in_desc: *mut c_void, out: out_func, out_desc: *mut c_void) -> c_int;
-    pub fn inflateBackEnd(strm: z_streamp) -> c_int;
-    pub fn inflateBackInit_(strm: z_streamp, windowBits: c_int, window: *mut c_uchar, version: *const c_char, stream_size: c_int) -> c_int;
     pub fn inflateCopy(dest: z_streamp, source: z_streamp) -> c_int;
     pub fn inflateEnd(strm: z_streamp) -> c_int;
     pub fn inflateGetDictionary(strm: z_streamp, dictionary: *mut Bytef, dictLength: *mut uInt) -> c_int;

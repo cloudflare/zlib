@@ -144,7 +144,6 @@ set(ZLIB_SRCS
     gzread.c
     gzwrite.c
     inflate.c
-    infback.c
     inftrees.c
     inffast.c
     trees.c

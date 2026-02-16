@@ -73,14 +73,6 @@
 	    <depend name="inflate.h" />
 	    <depend name="inffast.h" />
 	</source>
-	<source name="infback.c">
-	    <depend name="zlib.h" />
-	    <depend name="zconf.h" />
-	    <depend name="zutil.h" />
-	    <depend name="inftrees.h" />
-	    <depend name="inflate.h" />
-	    <depend name="inffast.h" />
-	</source>
 	<source name="inftrees.c">
 	    <depend name="zlib.h" />
 	    <depend name="zconf.h" />
