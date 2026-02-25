@@ -1,6 +1,6 @@
 [package]
 name = "cloudflare-zlib-sys"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 authors = ["Vlad Krasnov <vlad@cloudflare.com>", "Kornel Lesiński <kornel@geekhood.net>", "Mark Adler <madler@alumni.caltech.edu>"]
 categories = ["external-ffi-bindings", "compression"]
@@ -25,3 +25,6 @@ cc = "1.1"
 [features]
 # Obsolete
 asm = []
+
+[badges]
+maintenance.status = "deprecated"
